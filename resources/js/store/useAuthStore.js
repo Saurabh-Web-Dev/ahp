@@ -3,18 +3,17 @@ import axios from '../bootstrap'
 import { ref } from 'vue'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref(null)
-  const loading = ref(false)
+  const user = ref(JSON.parse(localStorage.getItem('user')) || null)
+  const loading = ref(true)
 
-  // Fetch user only once
   const fetchUser = async () => {
-    if (user.value || loading.value) return
     try {
-      loading.value = true
       const res = await axios.get('/api/user')
       user.value = res.data
+      localStorage.setItem('user', JSON.stringify(res.data))
     } catch (e) {
       user.value = null
+      localStorage.removeItem('user')
     } finally {
       loading.value = false
     }
@@ -23,6 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     await axios.post('/api/logout')
     user.value = null
+    localStorage.removeItem('user')
   }
 
   return { user, loading, fetchUser, logout }

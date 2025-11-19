@@ -21,11 +21,15 @@ class Appointment extends Model
 
     public function patient()
     {
-        return $this->belongsTo(Patient::class);
+        return $this->belongsTo(\App\Models\Patient::class, 'patient_id');
     }
 
     public function doctor()
     {
-        return $this->belongsTo(User::class, 'doctor_id');
+        return $this->belongsTo(\App\Models\User::class, 'doctor_id');
+    }
+    public function prescription()
+    {
+        return $this->hasOne(\App\Models\Prescription::class, 'appointment_id');
     }
 }

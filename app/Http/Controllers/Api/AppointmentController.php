@@ -94,13 +94,22 @@ class AppointmentController extends Controller
 
     public function show($id)
     {
-        $appointment = \App\Models\Appointment::with('patient')->find($id);
+        // $appointment = \App\Models\Appointment::with('patient')->find($id);
+        // $appointment = Appointment::with(['patient','doctor','prescription.medicines']);
+
+
+        $appointment = Appointment::with([
+            'patient:id,name,gender,age',
+            'doctor:id,name',
+            'prescription.medicines'
+        ])->findOrFail($id);
 
         if (!$appointment) {
             return response()->json(['message' => 'Appointment not found'], 404);
         }
 
         return response()->json($appointment);
+
     }
 }
 

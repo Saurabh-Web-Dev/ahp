@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\api;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -23,18 +23,48 @@ class PrescriptionController extends Controller
 
         $appointment = Appointment::findOrFail($appointmentId);
 
-        $prescription = Prescription::create([
-            'appointment_id' => $appointment->id,
-            'patient_id' => $appointment->patient_id,
-            'doctor_id' => $appointment->doctor_id,
-            'diagnosis' => $validated['diagnosis'],
-            'notes' => $validated['notes'] ?? null,
-        ]);
+        // 🔍 Check if prescription already exists for this appointment
+        $prescription = Prescription::where('appointment_id', $appointment->id)->first();
 
+        if ($prescription) {
+            // UPDATE instead of creating new
+            $prescription->update([
+                'diagnosis' => $validated['diagnosis'],
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            // Delete old medicines & re-add
+            $prescription->medicines()->delete();
+        } else {
+            // CREATE new prescription
+            $prescription = Prescription::create([
+                'appointment_id' => $appointment->id,
+                'patient_id' => $appointment->patient_id,
+                'doctor_id' => $appointment->doctor_id,
+                'diagnosis' => $validated['diagnosis'],
+                'notes' => $validated['notes'] ?? null,
+            ]);
+        }
+
+        // Insert medicines
         foreach ($validated['medicines'] as $med) {
             $prescription->medicines()->create($med);
         }
 
-        return response()->json(['message' => 'Prescription saved successfully']);
+        return response()->json([
+            'message' => $prescription->wasRecentlyCreated
+                ? 'Prescription saved successfully'
+                : 'Prescription updated successfully',
+        ]);
     }
+
+    public function getByAppointment($appointmentId)
+    {
+        $prescription = Prescription::where('appointment_id', $appointmentId)
+            ->with('medicines')
+            ->first();
+
+        return response()->json($prescription);
+    }
+
 }

@@ -154,24 +154,27 @@
                   Dr. {{ a.doctor?.name || "-" }}
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    :class="{
-                      'bg-warning text-dark': a.status === 'pending',
-                      'bg-success': a.status === 'completed',
-                      'bg-secondary': a.status !== 'pending' && a.status !== 'completed'
-                    }"
-                  >
-                    <i
-                      class="fa"
-                      :class="{
-                        'fa-clock-o': a.status === 'pending',
-                        'fa-check': a.status === 'completed',
-                        'fa-minus-circle': a.status !== 'pending' && a.status !== 'completed'
-                      }"
-                    ></i>
-                    {{ a.status }}
-                  </span>
+                    <span
+                        class="badge"
+                        :class="{
+                        'bg-warning text-dark': a.status === 'pending',
+                        'bg-success': a.status === 'completed',
+                        'bg-secondary': a.status !== 'pending' && a.status !== 'completed'
+                        }">
+                        <i
+                        class="fa"
+                        :class="{
+                            'fa-clock-o': a.status === 'pending',
+                            'fa-check': a.status === 'completed',
+                            'fa-minus-circle': a.status !== 'pending' && a.status !== 'completed'
+                        }"
+                        ></i>
+                        {{ a.status }}
+                    </span>
+                  <!-- View Prescription Button -->
+                    <button v-if="a.status === 'completed'" class="btn btn-sm btn-outline-primary ms-2" @click="openPrescription(a.id)">
+                        <i class="fa fa-file-text"></i> View
+                    </button>
                 </td>
               </tr>
 
@@ -188,6 +191,39 @@
       </div>
     </div>
   </div>
+  <!-- Prescription Modal -->
+    <div v-if="showModal" class="modal-backdrop-custom" @click.self="showModal = false">
+        <div class="modal-box">
+            <h4 class="text-primary">
+            <i class="fa fa-file-text"></i> Prescription Details
+            </h4>
+
+            <div v-if="prescription">
+            <p><strong>Diagnosis:</strong> {{ prescription.diagnosis }}</p>
+            <p><strong>Notes:</strong> {{ prescription.notes }}</p>
+
+            <h5 class="mt-3">Medicines</h5>
+            <ul class="list-group">
+                <li v-for="m in prescription.medicines" :key="m.id" class="list-group-item">
+                <strong>{{ m.medicine_name }}</strong>
+                — <i>{{ m.dosage }}</i> INTERVAL {{ m.duration }}
+                <br>
+                <small class="text-muted">{{ m.instructions }}</small>
+                </li>
+            </ul>
+            </div>
+
+            <div v-else>
+            <p class="text-muted">No prescription found.</p>
+            </div>
+
+            <button class="btn btn-danger w-100 mt-3" @click="showModal = false">
+            Close
+            </button>
+        </div>
+    </div>
+
+
 </template>
 
 
@@ -205,6 +241,8 @@ const newToken = ref("");
 const loading = ref(false);
 const errors = ref({});
 const tableLoading = ref(true);
+const showModal = ref(false);
+const prescription = ref(null);
 
 
 
@@ -215,6 +253,18 @@ onMounted(() => {
   getAppointments();
 });
 
+const openPrescription = async (appointmentId) => {
+    // console.log(appointmentId);
+    // return;
+  try {
+    const res = await axios.get(`/api/appointments/${appointmentId}`);
+    prescription.value = res.data.prescription || null;
+    showModal.value = true;
+  } catch (error) {
+    console.error(error);
+    alert("Unable to load prescription!");
+  }
+};
 
 
 // Search patients
@@ -389,5 +439,24 @@ function formatDate(dateStr) {
     color: #6c757d;
   }
 }
+
+.modal-backdrop-custom {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.modal-box {
+  background: white;
+  padding: 20px;
+  width: 420px;
+  border-radius: 10px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.2);
+}
+
 
 </style>

@@ -6,8 +6,9 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ManagerController;
 use App\Http\Controllers\Api\AppointmentController;
 use App\Http\Controllers\Api\DoctorDashboardController;
-use App\Http\Controllers\api\PatientController;
-use App\Http\Controllers\api\PrescriptionController;
+use App\Http\Controllers\Api\PatientController;
+use App\Http\Controllers\Api\PrescriptionController;
+use App\Http\Controllers\Api\AiController;
 
 // For SPA cookie-based auth: frontend should call GET /sanctum/csrf-cookie first (Sanctum route)
 Route::post('/login', [AuthController::class, 'login']);              // doctor/manager login
@@ -41,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/appointments/{id}/prescription', [PrescriptionController::class, 'store']);
     Route::get('/patients/{id}/prescriptions', [PatientController::class, 'prescriptions']);
     Route::get('/appointments/{id}', [AppointmentController::class, 'show']);
+    Route::post('/ai/homeopathy-suggest', [AiController::class, 'suggest']);
+    Route::get('/appointments/{id}/prescription', [PrescriptionController::class, 'getByAppointment']);
 });
 
 

@@ -97,9 +97,17 @@
                         <button class="btn btn-sm btn-warning me-2" @click="editPatient(p)">
                             <i class="fa fa-pencil-square"></i> Edit
                         </button>
-                        <button class="btn btn-sm btn-info me-2" @click="openDetails(p)">
-                            <i class="bi bi-eye"></i> Details
+                        <button
+                        class="btn btn-sm btn-info me-2"
+                        @click="openDetails(p)"
+                        :disabled="detailsLoader === p.id"
+                        >
+                            <span v-if="detailsLoader === p.id" class="spinner-border spinner-border-sm"></span>
+                            <span v-else>
+                                <i class="fa fa-eye"></i> Details
+                            </span>
                         </button>
+
                     </td>
                   </tr>
                 </tbody>
@@ -286,9 +294,10 @@
                     >
                     <i class="fa fa-times-circle"></i> Cancel
                     </button>
-                    <button type="submit" class="btn btn-success px-4">
-                    <i class="fa" :class="isEditing ? 'fa-save' : 'fa-check-circle'"></i>
-                    {{ isEditing ? "Update Patient" : "Save Patient" }}
+                    <button type="submit" class="btn btn-success px-4" :disabled="savePatientLoader">
+                        <span v-if="savePatientLoader" class="spinner-border spinner-border-sm"></span>
+                        <i class="fa" :class="isEditing ? 'fa-save' : 'fa-check-circle'"></i>
+                        {{ isEditing ? "Update Patient" : "Save Patient" }}
                     </button>
                 </div>
             </form>
@@ -371,6 +380,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import * as bootstrap from "bootstrap";
 import Sidebar from "./common/Sidebar.vue";
+import { inject } from 'vue'
 
 const router = useRouter();
 const user = ref(null);
@@ -384,7 +394,9 @@ const isEditing = ref(false);
 const editingId = ref(null);
 const searchQuery = ref("");
 let searchTimer = null;
-
+const detailsLoader = ref(null);
+const savePatientLoader = ref(false);
+const toast = inject("toast");
 /////////////////
 const detailsModalRef = ref(null);
 const selectedPatient = ref(null);
@@ -449,15 +461,20 @@ onMounted(async () => {
 });
 
 async function openDetails(patient) {
+  detailsLoader.value = patient.id;
   selectedPatient.value = patient;
+
   try {
-    const res = await axios.get(`/api/patients/${patient.id}/appointments`);
-    appointments.value = res.data.appointments;
-    detailsModal.show();
+      const res = await axios.get(`/api/patients/${patient.id}/appointments`);
+      appointments.value = res.data.appointments;
+      detailsModal.show();
   } catch (err) {
-    console.error("Error fetching patient details", err);
+      console.error("Error fetching patient details", err);
+  } finally {
+      detailsLoader.value = null;
   }
 }
+
 
 function statusClass(status) {
   return {
@@ -509,21 +526,28 @@ async function validateAndSave() {
 }
 
 async function savePatient() {
-  try {
-    await axios.get("/sanctum/csrf-cookie");
-    if (isEditing.value) {
-      const res = await axios.put(`/api/patients/${editingId.value}`, form.value);
-      const index = patients.value.findIndex((p) => p.id === editingId.value);
-      if (index !== -1) patients.value[index] = res.data.patient;
-    } else {
-      const res = await axios.post("/api/patients", form.value);
-      patients.value.unshift(res.data.patient);
+    savePatientLoader.value = true;
+    try {
+        await axios.get("/sanctum/csrf-cookie");
+        if (isEditing.value) {
+            const res = await axios.put(`/api/patients/${editingId.value}`, form.value);
+            const index = patients.value.findIndex((p) => p.id === editingId.value);
+            if (index !== -1) patients.value[index] = res.data.patient;
+        } else {
+            const res = await axios.post("/api/patients", form.value);
+            patients.value.unshift(res.data.patient);
+        }
+        modalInstance.hide();
+        toast.value.showToast("success", isEditing.value
+            ? "Patient updated successfully!"
+            : "Patient saved successfully!"
+        );
+    } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || "Error saving patient");
+    }finally{
+        savePatientLoader.value = false;
     }
-    modalInstance.hide();
-  } catch (err) {
-    console.error(err);
-    alert(err.response?.data?.message || "Error saving patient");
-  }
 }
 
 function editPatient(patient) {
